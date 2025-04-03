@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, Alert, Image, Platform, StyleSheet } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { Picker } from '@react-native-picker/picker'; 
-import AsyncStorage from '@react-native-async-storage/async-storage'; 
+import { Picker } from '@react-native-picker/picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Feng37() {
   const [bankSavings, setBankSavings] = useState(Array(10).fill(0));
@@ -31,19 +31,22 @@ export default function Feng37() {
   }, []);
 
   function fetchUserData(user) {
-    fetch("https://feng37.fwh.is/LoadData.php", {
+    fetch("https://rncoursefeng37.onrender.com/LoadData", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ userName: user }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userName: user }),
     })
       .then((res) => res.json())
       .then((data) => {
+        console.log(data.bankSavings);  // Log the bankSavings array to check its content
         if (data.success) {
-          setBankSavings(data.bankSavings);
-          setSumSaving(
-            data.bankSavings.reduce((sum, num) => sum + parseInt(num), 0)
-          );
-          setSaving(data.bankSavings[selectedIndex]);
+          const cleanedSavings = data.bankSavings.map(value => {
+            // Ensure every value is an integer or default to 0
+            return isNaN(value) ? 0 : parseInt(value);
+          });
+          setBankSavings(cleanedSavings);
+          setSumSaving(cleanedSavings.reduce((sum, num) => sum + num, 0));
+          setSaving(cleanedSavings[selectedIndex]);
         } else {
           showAlert("錯誤", "無法讀取該使用者的資料");
         }
@@ -68,11 +71,8 @@ export default function Feng37() {
   }
 
   function handleInputChange(text) {
-    if (
-      isNaN(text) ||
-      text.includes(".") ||
-      !Number.isInteger(Number(text))
-    ) {
+    const value = parseInt(text);
+    if (isNaN(value) || value < 0) {
       setSumSaving("請輸入正整數或零");
       setSaving(0);
       let updatedSavings = [...bankSavings];
@@ -80,10 +80,10 @@ export default function Feng37() {
       setBankSavings(updatedSavings);
     } else {
       let updatedSavings = [...bankSavings];
-      updatedSavings[selectedIndex] = text;
+      updatedSavings[selectedIndex] = value;
       setBankSavings(updatedSavings);
-      setSaving(text);
-      setSumSaving(updatedSavings.reduce((sum, num) => sum + parseInt(num), 0));
+      setSaving(value);
+      setSumSaving(updatedSavings.reduce((sum, num) => sum + num, 0));
     }
   }
 
@@ -107,12 +107,12 @@ export default function Feng37() {
     }
     AsyncStorage.setItem("userName", userName);
 
-    fetch("https://feng37.fwh.is/SaveData.php", {
+    fetch("https://rncoursefeng37.onrender.com/SaveData", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         userName: userName,
-        bankSavings: JSON.stringify(bankSavings),
+        bankSavings: bankSavings,
       }),
     })
       .then((res) => res.json())
@@ -251,11 +251,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1F2937',
     textAlign: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
+    boxShadow: '0 2px 3px rgba(0, 0, 0, 0.2)', // Replace shadow properties with boxShadow
     minWidth: 150, // Set a minimum width to ensure enough space
   },
   total: {
